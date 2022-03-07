@@ -15,6 +15,9 @@ Esse projeto foi desenvolvido com [Python](https://www.python.org/downloads/) e 
 ### `pip install pyttsx3`
 "pyttsx3" para transformar texto em audio
 
+### `pip install pillow`
+"pillow" foi utilizado na interface gráfica
+
 ## Configuração
 
 Em breve explicação sobre como colocar para iniciar automaticamente ao ligar a raspberry.
