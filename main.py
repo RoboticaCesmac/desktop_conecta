@@ -152,7 +152,7 @@ falar("Inicializando Conecta")
 janela = Tk()
 janela.title("Conecta")
 
-expressaoAusente = carregarFramesGIF("expressoes/expressao-ausente.gif")
+# expressaoAusente = carregarFramesGIF("expressoes/expressao-ausente.gif")
 # expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
 # expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
 
