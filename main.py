@@ -7,9 +7,11 @@ from PIL import Image
 
 # Palavra que é necessário falar antes de dar inicio a uma pergunta
 wake_word = "conecta"
+status = "ausente"
 
-
-# Reproduz em audio o texto passado por parâmetro
+"""
+Reproduz em audio o texto passado por parâmetro
+"""
 def falar(texto):
     pytts = pyttsx3.init("sapi5")
     pytts.setProperty("voice", "brazil")
@@ -18,92 +20,71 @@ def falar(texto):
     print("Eu falei: "+texto)
 
 
-# Transforma em texto o que foi escutado do microfone
-def escutar():
-    recognizer = speech_recognition.Recognizer() 
-    with speech_recognition.Microphone() as origemAudio:
-        # Guarda o audio escutado do microphone
-        audioEscutado = recognizer.listen(origemAudio)
-        textoFalado = ""
+"""
+Fica escutando o microfone e chama a função de entender o que foi falado quando é reconhecido algum som
+"""
+def escutarMicrofone():
+    recognizer = speech_recognition.Recognizer()
+    microfone = speech_recognition.Microphone()
+    with microfone as origemAudio:
+        recognizer.adjust_for_ambient_noise(origemAudio)
+
+    print("Escutando microfone...")
+    global parar_escutar
+    ## O listen_in_background é responsável pelo loop do reconhecimento de voz
+    parar_escutar = recognizer.listen_in_background(origemAudio, entenderTextoFalado)
         
-        try:
-            # Transforma o audio escutado em texto
-            textoFalado = recognizer.recognize_google(audioEscutado, language="pt-BR")
-            print("Eu escutei: "+textoFalado)
-        except Exception as excecao:
-            print("Erro: "+str(excecao))
-    
+
+"""
+Transforma o audio em texto e retorna o resultado
+"""
+def audioParaTexto(recognizer, audioEscutado):
+    textoFalado = ""
+
+    try:
+        # Transforma o audio escutado em texto
+        textoFalado = recognizer.recognize_google(audioEscutado, language="pt-BR")
+    except speech_recognition.UnknownValueError as erro:
+        print("Erro: "+str(erro))
+
+    print("Eu escutei: "+textoFalado)
     return textoFalado.lower()
 
-
-# Função principal (a primeira que inicia)
-# def main():
-#     print("Programa iniciado")
-#     falar("Olá! Eu sou a conecta")
-
-#     while True:
-#         print("Escutando o microfone")
-#         audioEscutado = escutar()
-
-#         # Se a palavra definida na variável wake_word tiver aparecido no texto audioEscutado, então aguarda que o usuário faça uma pergunta
-#         if audioEscutado.count(wake_word) > 0:
-#             print("Palavra de despertar encontrada")
-#             falar("Ao seu dispor")
-
-#             audioEscutado = escutar()
-#             resposta = ""
-
-#             # Tenta entender a pergunta
-#             frasesBoasVindas = ["olá", "bom dia", "boa tarde", "boa noite", "quem é"]
-#             for frase in frasesBoasVindas:
-#                 if frase in audioEscutado:
-#                     falar("Olá! Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e tenho esse lindo chapéu de guerreiro na minha cabeça representando a nossa cultura. Qual o seu nome?")
-#                     nome_pessoa = escutar()
-#                     resposta = "Prazer em te conhecer "+nome_pessoa
-
-#             # Responde de acordo com o que foi perguntado
-#             if(resposta == ""):
-#                 resposta = "Desculpa, não entendi o que você falou"
-
-#             falar(resposta)
-
-
-def main():
-    print("Escutando o microfone")
-    # setarExpressao("ausente")
-    audioEscutado = escutar()
+"""
+Checa o texto por meio das condições para tentar entender o que foi falado. Se enteder algo, dá uma resposta em audio
+"""
+def entenderTextoFalado(recognizer, audioEscutado):
+    textoFalado = audioParaTexto(recognizer, audioEscutado)
+    global status
+    global setarExpressao
+    resposta = ""
 
     # Se a palavra definida na variável wake_word tiver aparecido no texto audioEscutado, então aguarda que o usuário faça uma pergunta
-    if audioEscutado.count(wake_word) > 0:
-        print("Palavra de despertar encontrada")
-        # setarExpressao("aguardando")
-        falar("Ao seu dispor")
+    if (status == "ausente" and textoFalado.count(wake_word) > 0):
+        setarExpressao("aguardando")
+        status = "aguardando"
+        resposta = "Ao seu dispor"
+    elif (status == "aguardando"):
+        status = "respondendo"
 
-        audioEscutado = escutar()
-        # setarExpressao("respondendo")
-        resposta = ""
-
-        # Tenta entender a pergunta
         frasesBoasVindas = ["olá", "bom dia", "boa tarde", "boa noite", "quem é"]
         for frase in frasesBoasVindas:
-            if frase in audioEscutado:
-                falar("Olá! Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e tenho esse lindo chapéu de guerreiro na minha cabeça representando a nossa cultura. Qual o seu nome?")
-                nome_pessoa = escutar()
-                resposta = "Prazer em te conhecer "+nome_pessoa
+            if frase in textoFalado:
+                resposta = "Olá! Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e tenho esse lindo chapéu de guerreiro na minha cabeça representando a nossa cultura."
 
-        # Responde de acordo com o que foi perguntado
-        if(resposta == ""):
-            resposta = "Desculpa, não entendi o que você falou"
-
+        
+    # Responde de acordo com o que foi falado
+    if(resposta == "" and status != "ausente"): # Se estivesse aguardando a pergunta mas não entendeu o que foi falado
+        resposta = "Desculpa, não entendi o que você falou"
+        status = "ausente"
+    elif(resposta != "" and status == "respondendo"):   # Se estiver respondendo a pergunta
+        setarExpressao("respondendo")
+        falar(resposta)
+        status = "ausente"
+        setarExpressao("ausente")
+    elif(resposta != ""):   # Se estiver aguardando a pergunta
         falar(resposta)
     
-    ## Após 50 milissegundos a função main é chamada novamente
-    janela.after(50, main)
-
-
-
-# Chama a função principal (inicio)
-# main()
 
 '''
 Função recebe por parâmetro o caminho de uma imagem animada GIF e retorna um array com cada frame da animação
@@ -119,13 +100,16 @@ Função que recebe um array com os frames da imagem animada GIF e fica respons�
 no label presente na janela da interface gráfica
 '''
 def animarGIFExpressao(framesGIF, contadorFrame = 0):
+    global animacaoGIF
+
     frame = framesGIF[contadorFrame]
-    labelExpressao.configure(image=frame)
+    labelExpressao.configure(image=frame)   # Edita o frame apresentado no label
 
     contadorFrame += 1
     if contadorFrame == len(framesGIF):
         contadorFrame = 0
 
+    # Para manter o GIF animado por meio de um loop (50 Milissegundos por repetição)
     animacaoGIF = janela.after(50, lambda :animarGIFExpressao(framesGIF, contadorFrame))
 
 '''
@@ -134,7 +118,8 @@ passada por parâmetro
 '''
 def setarExpressao(nomeExpressao):
     if(animacaoGIF != None):
-        janela.after_cancel(animacaoGIF)
+        janela.after_cancel(animacaoGIF) # Parar gif que já está sendo reproduzido
+        print("Animação antiga parada")
 
     if nomeExpressao == "aguardando":
         animarGIFExpressao(expressaoAguardando)
@@ -147,26 +132,27 @@ def setarExpressao(nomeExpressao):
 
 
 
-falar("Inicializando Conecta")
+"""
+# # # # Inicialização da Conecta # # # #
+"""
+falar("Inicializando expressões. Isso pode levar alguns minutos.")
 
 janela = Tk()
 janela.title("Conecta")
 
-# expressaoAusente = carregarFramesGIF("expressoes/expressao-ausente.gif")
-# expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
-# expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
+expressaoAusente = carregarFramesGIF("expressoes/expressao-ausente.gif")
+expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
+expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
 
 labelExpressao = Label(janela)
+labelExpressao.config(bg="black")
 labelExpressao.pack()
 
 animacaoGIF = None
-# setarExpressao("ausente")
-# animarGIFExpressao(expressaoAusente)
+setarExpressao("ausente")
 
-## Após 50 milissegundos a função main é chamada
-janela.after(50, main)
+escutarMicrofone()
 
-falar("Conecta inicializada")
+falar("Estou pronta")
 
 janela.mainloop()
-

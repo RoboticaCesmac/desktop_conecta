@@ -32,8 +32,9 @@ Para iniciar a aplicação.
 
 ## O que falta?
 
-- A interface gráfica com as expressões da Conecta <br/>
-- Adicionar as demais perguntas
+- Otimizar a interface gráfica (Qualidade da animação do GIF e troca de expressões) <br/>
+- Otimizar a ação de escutar. Talvez tentar colocar um timeout para que ele não espere acabar de falar pra poder tentar entender a pergunta, porque às vezes fica travado quando tá muito barulho <br/>
+- Adicionar mamis perguntas
 
 ## Links que podem ser úteis
 
