@@ -1,7 +1,5 @@
 import os
 import time
-import threading
-
 import speech_recognition
 import pyttsx3
 from tkinter import *
@@ -9,6 +7,7 @@ from PIL import Image
 
 # Palavra que é necessário falar antes de dar inicio a uma pergunta
 wake_word = "conecta"
+status = "ausente"
 
 """
 Reproduz em audio o texto passado por parâmetro
@@ -25,20 +24,28 @@ def falar(texto):
 Fica escutando o microfone e chama a função de entender o que foi falado quando é reconhecido algum som
 """
 def escutarMicrofone():
-    print("Escutando microfone...")
-    textoFalado = ""
     recognizer = speech_recognition.Recognizer()
+    microfone = speech_recognition.Microphone()
+    with microfone as origemAudio:
+        recognizer.adjust_for_ambient_noise(origemAudio)
 
-    while textoFalado == "":
-        with speech_recognition.Microphone() as origemAudio:
-            audioEscutado = recognizer.listen(origemAudio)
+    print("Escutando microfone...")
+    global parar_escutar
+    ## O listen_in_background é responsável pelo loop do reconhecimento de voz
+    parar_escutar = recognizer.listen_in_background(origemAudio, entenderTextoFalado)
+        
 
-        try:
-            # Transforma o audio escutado em texto
-            textoFalado = recognizer.recognize_google(audioEscutado, language="pt-BR")
-        except speech_recognition.UnknownValueError as erro:
-            if(str(erro) != ""):
-                print("Erro: "+str(erro))
+"""
+Transforma o audio em texto e retorna o resultado
+"""
+def audioParaTexto(recognizer, audioEscutado):
+    textoFalado = ""
+
+    try:
+        # Transforma o audio escutado em texto
+        textoFalado = recognizer.recognize_google(audioEscutado, language="pt-BR")
+    except speech_recognition.UnknownValueError as erro:
+        print("Erro: "+str(erro))
 
     print("Eu escutei: "+textoFalado)
     return textoFalado.lower()
@@ -46,33 +53,38 @@ def escutarMicrofone():
 """
 Checa o texto por meio das condições para tentar entender o que foi falado. Se enteder algo, dá uma resposta em audio
 """
-def main():
-    while True:
+def entenderTextoFalado(recognizer, audioEscutado):
+    textoFalado = audioParaTexto(recognizer, audioEscutado)
+    global status
+    global setarExpressao
+    resposta = ""
+
+    # Se a palavra definida na variável wake_word tiver aparecido no texto audioEscutado, então aguarda que o usuário faça uma pergunta
+    if (status == "ausente" and textoFalado.count(wake_word) > 0):
+        setarExpressao("aguardando")
+        status = "aguardando"
+        resposta = "Ao seu dispor"
+    elif (status == "aguardando"):
+        status = "respondendo"
+
+        frasesBoasVindas = ["olá", "bom dia", "boa tarde", "boa noite", "quem é"]
+        for frase in frasesBoasVindas:
+            if frase in textoFalado:
+                resposta = "Olá! Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e tenho esse lindo chapéu de guerreiro na minha cabeça representando a nossa cultura."
+
+        
+    # Responde de acordo com o que foi falado
+    if(resposta == "" and status != "ausente"): # Se estivesse aguardando a pergunta mas não entendeu o que foi falado
+        resposta = "Desculpa, não entendi o que você falou"
+        status = "ausente"
+    elif(resposta != "" and status == "respondendo"):   # Se estiver respondendo a pergunta
+        setarExpressao("respondendo")
+        falar(resposta)
+        status = "ausente"
         setarExpressao("ausente")
-        textoFalado = escutarMicrofone()
-        resposta = ""
-
-        # Se a palavra definida na variável wake_word tiver aparecido no texto audioEscutado, então aguarda que o usuário faça uma pergunta
-        if (textoFalado.count(wake_word) > 0):
-            setarExpressao("aguardando")
-            falar("Ao seu dispor")
-            textoFalado = escutarMicrofone()
-
-            frasesBoasVindas = ["olá", "bom dia", "boa tarde", "boa noite", "quem é"]
-            for frase in frasesBoasVindas:
-                if frase in textoFalado:
-                    setarExpressao("respondendo")
-                    falar("Olá! Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e tenho esse lindo chapéu de guerreiro na minha cabeça representando a nossa cultura. Seu nome é?")
-                    setarExpressao("aguardando")
-                    nomeFalado = escutarMicrofone()
-                    resposta = "Prazer em te conhecer "+nomeFalado
-
-            # Se não tiver entendido o que foi falado
-            if(resposta == ""):
-                resposta = "Desculpa, não entendi o que você falou"
-            
-            setarExpressao("respondendo")
-            falar(resposta)
+    elif(resposta != ""):   # Se estiver aguardando a pergunta
+        falar(resposta)
+    
 
 '''
 Função recebe por parâmetro o caminho de uma imagem animada GIF e retorna um array com cada frame da animação
@@ -136,13 +148,11 @@ labelExpressao = Label(janela)
 labelExpressao.config(bg="black")
 labelExpressao.pack()
 
-animacaoGIF = None  # Pra poder parar a animação do GIF posteriormente
+animacaoGIF = None
+setarExpressao("ausente")
+
+escutarMicrofone()
 
 falar("Estou pronta")
-
-# Inicia a função main em uma Thread, para que fique rodando ao  mesmo tempo que as funções responsáveis pelas expressões.
-threadMain = threading.Thread(target=main, args=())
-threadMain.daemon = True    # https://stackoverflow.com/questions/11815947/cannot-kill-python-script-with-ctrl-c
-threadMain.start()
 
 janela.mainloop()
