@@ -1,24 +1,30 @@
 import os
 import time
+from random import randint
+from datetime import datetime
 import threading
 
 import speech_recognition
 import pyttsx3
 from tkinter import *
 from PIL import Image
+from playsound import playsound
 
 # Palavra que é necessário falar antes de dar inicio a uma pergunta
-wake_word = "conecta"
+wake_word = "conect"
 
 """
 Reproduz em audio o texto passado por parâmetro
 """
-def falar(texto):
-    pytts = pyttsx3.init("sapi5")
-    pytts.setProperty("voice", "brazil")
-    pytts.say(texto)
-    pytts.runAndWait()
-    print("Eu falei: "+texto)
+def falar(textos):
+    if(len(textos) > 0):
+        texto = textos[randint(0,len(textos)-1)]   # Escolhe um texto dentre vários
+
+        pytts = pyttsx3.init("sapi5")
+        pytts.setProperty("voice", "brazil")
+        pytts.say(texto)
+        pytts.runAndWait()
+        print("Eu falei: "+texto)
 
 
 """
@@ -50,29 +56,67 @@ def main():
     while True:
         setarExpressao("ausente")
         textoFalado = escutarMicrofone()
-        resposta = ""
+        respostas = []
 
         # Se a palavra definida na variável wake_word tiver aparecido no texto audioEscutado, então aguarda que o usuário faça uma pergunta
         if (textoFalado.count(wake_word) > 0):
-            setarExpressao("aguardando")
-            falar("Ao seu dispor")
-            textoFalado = escutarMicrofone()
+            inicioDelay = time.time()
+            parar = False
+            numeroRespostas = 0
+            falar(["Ao seu dispor"])
 
-            frasesBoasVindas = ["olá", "bom dia", "boa tarde", "boa noite", "quem é"]
-            for frase in frasesBoasVindas:
-                if frase in textoFalado:
+            while((time.time() - inicioDelay < 120 and parar == False)): # Enquanto não tiver passado 2 minutos dentro do while ele continua aguardando uma pergunta
+                setarExpressao("aguardando")
+                textoFalado = escutarMicrofone()
+
+                frasesBoasVindas = ["olá", "bom dia", "boa tarde", "boa noite"]
+                for frase in frasesBoasVindas:
+                    if frase in textoFalado:
+                        setarExpressao("respondendo")
+                        falar(["Oi! Tudo bem?"])
+                        setarExpressao("aguardando")
+                        respostaBoasVindas = escutarMicrofone()
+                        if "não" in respostaBoasVindas:
+                            respostas = ["Que pena. Desejo que esteja melhor o mais breve possível"]
+                        else:
+                            respostas = ["Que ótimo! Também estou bem. Melhor agora."]
+
+                if "quem é" in textoFalado:
+                    respostas = ["Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e esse chapéu de guerreiro na minha cabeça é uma homenagem ao folclore alagoano"]
+
+                if "horas" in textoFalado:
+                    respostas = ["Agora são "+str(datetime.today().hour)+" horas e "+str(datetime.today().minute)+" minutos"]
+
+                if "robótica" in textoFalado:
+                    respostas = ["Eu fui desenvolvida no núcleo de robótica. Ele é um núcleo de pesquisa onde por meio da tecnologia são desenvolvidos projetos solicitados por alunos e professores. Como aplicativos, equipamentos e até mesmo próteses. O núcleo de robótica é multidisciplinar."]
+
+                if "piada" in textoFalado:
+                    respostas = ["Porquê os robôs nunca sentem medo? A resposta é: Porque nós temos nervos de aço. Rárárárá"]
+                    playsound("audios/badumtss.mp3")
+
+                if "inteligente" in textoFalado:
+                    respostas = ["Obrigada", "Muito obrigada"]
+                elif "conversa" in textoFalado:
+                    respostas = ["Converso sim. Você pode me perguntar o que é o núcleo de robótica, quem eu sou e até mesmo me pedir para contar uma piada."]
+                elif "obrigad" in textoFalado:
+                    respostas = ["Foi um prazer te responder", "Tamo junto", "Não há de quê", "De nada"]
+                elif "desculpa" in textoFalado:
+                    respostas = ["Tá tudo bem", "Sem problemas"]
+                elif "parar" in textoFalado:
+                    respostas = ["Tchau, adorei ter falado com você", "Até mais", "Tchauzinho"]
+                    parar = True
+
+                # Se não tiver entendido o que foi falado (isso roda apenas se a conecta ainda não tiver dado nenhuma resposta)
+                if(len(respostas) == 0 and numeroRespostas == 0):
+                    setarExpressao("ausente")
+                    respostas = ["Desculpa, não entendi o que você falou"]
+                else:
                     setarExpressao("respondendo")
-                    falar("Olá! Eu sou a conecta, fui desenvolvida pelo núcleo de robótica do cesmac e tenho esse lindo chapéu de guerreiro na minha cabeça representando a nossa cultura. Seu nome é?")
-                    setarExpressao("aguardando")
-                    nomeFalado = escutarMicrofone()
-                    resposta = "Prazer em te conhecer "+nomeFalado
+                    numeroRespostas = numeroRespostas + 1
 
-            # Se não tiver entendido o que foi falado
-            if(resposta == ""):
-                resposta = "Desculpa, não entendi o que você falou"
-            
-            setarExpressao("respondendo")
-            falar(resposta)
+                falar(respostas)
+                respostas = []
+
 
 '''
 Função recebe por parâmetro o caminho de uma imagem animada GIF e retorna um array com cada frame da animação
@@ -123,14 +167,16 @@ def setarExpressao(nomeExpressao):
 """
 # # # # Inicialização da Conecta # # # #
 """
-falar("Inicializando expressões. Isso pode levar alguns minutos.")
+falar(["Inicializando expressões. Isso pode levar alguns minutos."])
 
 janela = Tk()
 janela.title("Conecta")
 
 expressaoAusente = carregarFramesGIF("expressoes/expressao-ausente.gif")
-expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
-expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
+# expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
+# expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
+expressaoAguardando = expressaoAusente
+expressaoRespondendo = expressaoAusente
 
 labelExpressao = Label(janela)
 labelExpressao.config(bg="black")
@@ -138,7 +184,7 @@ labelExpressao.pack()
 
 animacaoGIF = None  # Pra poder parar a animação do GIF posteriormente
 
-falar("Estou pronta")
+falar(["Estou pronta"])
 
 # Inicia a função main em uma Thread, para que fique rodando ao  mesmo tempo que as funções responsáveis pelas expressões.
 threadMain = threading.Thread(target=main, args=())
