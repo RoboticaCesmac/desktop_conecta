@@ -9,6 +9,9 @@ import pyttsx3
 from tkinter import *
 from PIL import Image
 from playsound import playsound
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
 
 # Palavra que é necessário falar antes de dar inicio a uma pergunta
 wake_word = "conect"
@@ -34,10 +37,12 @@ def escutarMicrofone():
     print("Escutando microfone...")
     textoFalado = ""
     recognizer = speech_recognition.Recognizer()
+    recognizer.dynamic_energy_threshold = False
+    recognizer.energy_threshold = 400   # Para evitar que um ruído ambiente faça pensar que o usuário ainda está falando: https://stackoverflow.com/questions/32753415/python-speechrecognition-ignores-timeout-when-listening-and-hangs
 
     while textoFalado == "":
         with speech_recognition.Microphone() as origemAudio:
-            audioEscutado = recognizer.listen(origemAudio)
+            audioEscutado = recognizer.listen(origemAudio, phrase_time_limit=5.0)   # phrase_time_limit: máximo de segundos que isso permitirá que uma frase continue antes de parar e retornar a parte da frase processada
 
         try:
             # Transforma o audio escutado em texto
@@ -93,6 +98,14 @@ def main():
                 if "piada" in textoFalado:
                     respostas = ["Porquê os robôs nunca sentem medo? A resposta é: Porque nós temos nervos de aço. Rárárárá"]
                     playsound("audios/badumtss.mp3")
+
+                if "fechar" in textoFalado:
+                    db.reference("Portas").child("Porta 1").set(True)
+                    respostas = ["Ok, porta fechada", "Tudo bem, fechei a porta", "Pronto"]
+
+                if "abrir" in textoFalado:
+                    db.reference("Portas").child("Porta 1").set(False)
+                    respostas = ["Ok, porta aberta", "Tudo bem, abri a porta", "Pronto"]
 
                 if "inteligente" in textoFalado:
                     respostas = ["Obrigada", "Muito obrigada"]
@@ -171,16 +184,24 @@ falar(["Inicializando expressões. Isso pode levar alguns minutos."])
 
 janela = Tk()
 janela.title("Conecta")
+janela.configure(bg="black")
+janela.attributes("-fullscreen", True)
 
+# Inicialização do firebase
+credencial = credentials.Certificate("serviceAccountKey.json")
+firebase = firebase_admin.initialize_app(credencial, {
+    'databaseURL': 'https://autcitec-default-rtdb.firebaseio.com/'
+})
+
+# Loading das expressões
 expressaoAusente = carregarFramesGIF("expressoes/expressao-ausente.gif")
-# expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
-# expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
-expressaoAguardando = expressaoAusente
-expressaoRespondendo = expressaoAusente
+expressaoAguardando = carregarFramesGIF("expressoes/expressao-aguardando.gif")
+expressaoRespondendo = carregarFramesGIF("expressoes/expressao-respondendo.gif")
 
 labelExpressao = Label(janela)
 labelExpressao.config(bg="black")
 labelExpressao.pack()
+labelExpressao.place(x=janela.winfo_screenwidth()/2, y=janela.winfo_screenheight()/2, anchor="center") # Posiciona o centro do label na posição x e y equivalentes a metade da janela
 
 animacaoGIF = None  # Pra poder parar a animação do GIF posteriormente
 
