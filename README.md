@@ -4,7 +4,7 @@ Essa aplicação permite que você faça uma pergunta à Conecta após falar a p
 
 ## Tecnologia
 
-Esse projeto foi desenvolvido com [Python](https://www.python.org/downloads/) e faz uso das dependências listadas abaixo. É recomendado instalá-las com o terminal no modo administrador, para que elas possam ser instaladas globalmente e não dar erro quando o script inicializar com a raspberry. <br/>
+Esse projeto foi desenvolvido com [Python 3.10.2](https://www.python.org/downloads/) e faz uso das dependências listadas abaixo. É recomendado instalá-las com o terminal no modo administrador, para que elas possam ser instaladas globalmente e não dar erro quando o script inicializar com a raspberry. <br/>
 
 ### `pip install SpeechRecognition`
 "SpeechRecognition" para reconhecer a voz e transformá-la em texto

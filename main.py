@@ -115,7 +115,7 @@ def main():
                     respostas = ["Foi um prazer te responder", "Tamo junto", "Não há de quê", "De nada"]
                 elif "desculpa" in textoFalado:
                     respostas = ["Tá tudo bem", "Sem problemas"]
-                elif "parar" in textoFalado:
+                elif "tchau" in textoFalado:
                     respostas = ["Tchau, adorei ter falado com você", "Até mais", "Tchauzinho"]
                     parar = True
 
@@ -144,7 +144,7 @@ def carregarFramesGIF(caminhoImagem):
 Função que recebe um array com os frames da imagem animada GIF e fica responsável por mantê-la animada
 no label presente na janela da interface gráfica
 '''
-def animarGIFExpressao(framesGIF, contadorFrame = 0):
+def animarGIFExpressao(nomeGIF, framesGIF, contadorFrame = 0):
     global animacaoGIF
 
     frame = framesGIF[contadorFrame]
@@ -155,23 +155,27 @@ def animarGIFExpressao(framesGIF, contadorFrame = 0):
         contadorFrame = 0
 
     # Para manter o GIF animado por meio de um loop (50 Milissegundos por repetição)
-    animacaoGIF = janela.after(50, lambda :animarGIFExpressao(framesGIF, contadorFrame))
+    if(nomeGIF == nomeGIFEmReproducao):
+        animacaoGIF = janela.after(50, lambda :animarGIFExpressao(nomeGIF, framesGIF, contadorFrame))
 
 '''
 Função que para qualquer animação que esteja em andamento para poder inicializar a animação da expressão
 passada por parâmetro
 '''
 def setarExpressao(nomeExpressao):
+    global nomeGIFEmReproducao
+    nomeGIFEmReproducao = nomeExpressao # Para caso uma função do animarGIF já esteja em execução, ele evite criar outro loop do GIF antigo e acabar animando 2 gifs ao mesmo tempo.
+
     if(animacaoGIF != None):
         janela.after_cancel(animacaoGIF) # Parar gif que já está sendo reproduzido
         print("Animação antiga parada")
 
     if nomeExpressao == "aguardando":
-        animarGIFExpressao(expressaoAguardando)
+        animarGIFExpressao(nomeExpressao, expressaoAguardando)
     elif nomeExpressao == "respondendo":
-        animarGIFExpressao(expressaoRespondendo)
+        animarGIFExpressao(nomeExpressao, expressaoRespondendo)
     else:
-        animarGIFExpressao(expressaoAusente)
+        animarGIFExpressao(nomeExpressao, expressaoAusente)
 
     print("Expressão "+nomeExpressao+" definida")
 
@@ -204,6 +208,7 @@ labelExpressao.pack()
 labelExpressao.place(x=janela.winfo_screenwidth()/2, y=janela.winfo_screenheight()/2, anchor="center") # Posiciona o centro do label na posição x e y equivalentes a metade da janela
 
 animacaoGIF = None  # Pra poder parar a animação do GIF posteriormente
+nomeGIFEmReproducao = ""
 
 falar(["Estou pronta"])
 
